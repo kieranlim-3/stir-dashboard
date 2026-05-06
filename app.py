@@ -76,11 +76,8 @@ def load_strip(today: date) -> pd.DataFrame:
 
 @st.cache_data(ttl=3600)
 def load_ref_rates(today: date) -> pd.DataFrame:
-    np.random.seed(42)
-    idx  = pd.bdate_range(end=today, periods=90)
-    effr = pd.Series(4.33, index=idx) + np.random.normal(0, 0.005, 90)
-    sofr = effr + np.random.normal(0.005, 0.005, 90)
-    return pd.DataFrame({"effr": effr, "sofr": sofr})
+    from loaders.nyfed_loader import load_ref_rates as _load
+    return _load(today)
 
 def load_fomc_dates(today: date) -> list[date]:
     all_dates = [

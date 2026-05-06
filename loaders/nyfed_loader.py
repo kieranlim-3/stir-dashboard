@@ -1,5 +1,5 @@
 # ── loaders/nyfed_loader.py ───────────────────────────────────────────────────
-# Real loader for EFFR and SOFR from the New York Fed.
+# Real loader for EFFR and SOFR from FRED (St. Louis Fed).
 # These are FREE — no API key or subscription needed.
 # Drop this function in place of make_mock_ref_rates() in dashboard.py.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -7,26 +7,28 @@
 import pandas as pd
 from datetime import date
 
-EFFR_URL = "https://markets.newyorkfed.org/read?productCode=50&startDate=2020-01-01&endDate={end}&eventCodes=500&format=csv"
-SOFR_URL = "https://markets.newyorkfed.org/read?productCode=50&startDate=2020-01-01&endDate={end}&eventCodes=520&format=csv"
+# FRED CSV download URLs — no API key required
+EFFR_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EFFR"
+SOFR_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SOFR"
 
 def load_ref_rates(today: date) -> pd.DataFrame:
     """
-    Pull EFFR and SOFR from the NY Fed public CSV endpoint.
+    Pull EFFR and SOFR from FRED (St. Louis Fed) public CSV endpoint.
     Returns a DataFrame with columns [effr, sofr] indexed by business date.
     """
-    end_str = today.strftime("%Y-%m-%d")
+    effr = (pd.read_csv(EFFR_URL, parse_dates=["observation_date"])
+              .set_index("observation_date")["EFFR"]
+              .rename("effr")
+              .dropna()
+              .astype(float)
+              .sort_index())
 
-    effr_raw = pd.read_csv(EFFR_URL.format(end=end_str), parse_dates=["effectiveDate"])
-    sofr_raw = pd.read_csv(SOFR_URL.format(end=end_str), parse_dates=["effectiveDate"])
-
-    effr = (effr_raw.set_index("effectiveDate")["percentRate"]
-                    .rename("effr")
-                    .sort_index())
-
-    sofr = (sofr_raw.set_index("effectiveDate")["percentRate"]
-                    .rename("sofr")
-                    .sort_index())
+    sofr = (pd.read_csv(SOFR_URL, parse_dates=["observation_date"])
+              .set_index("observation_date")["SOFR"]
+              .rename("sofr")
+              .dropna()
+              .astype(float)
+              .sort_index())
 
     ref = pd.concat([effr, sofr], axis=1).dropna()
     return ref
